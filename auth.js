@@ -3,16 +3,24 @@ import crypto from 'crypto';
 const SESSION_COOKIE = 'bs_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function env(name) {
+  return (process.env[name] || '').trim();
+}
+
 export function isAuthConfigured() {
-  return Boolean(
-    process.env.AUTH_USERNAME &&
-    process.env.AUTH_PASSWORD &&
-    process.env.AUTH_SECRET
-  );
+  return Boolean(env('AUTH_USERNAME') && env('AUTH_PASSWORD') && env('AUTH_SECRET'));
+}
+
+export function getAuthConfigStatus() {
+  return {
+    hasUsername: Boolean(env('AUTH_USERNAME')),
+    hasPassword: Boolean(env('AUTH_PASSWORD')),
+    hasSecret: Boolean(env('AUTH_SECRET'))
+  };
 }
 
 function getSecret() {
-  const secret = process.env.AUTH_SECRET || '';
+  const secret = env('AUTH_SECRET');
   if (!secret) {
     throw new Error('AUTH_SECRET is not set');
   }
@@ -28,8 +36,8 @@ function safeEqual(a, b) {
 
 export function verifyCredentials(username, password) {
   if (!isAuthConfigured()) return false;
-  const expectedUser = process.env.AUTH_USERNAME || '';
-  const expectedPass = process.env.AUTH_PASSWORD || '';
+  const expectedUser = env('AUTH_USERNAME');
+  const expectedPass = env('AUTH_PASSWORD');
   const userOk = safeEqual(String(username || ''), expectedUser);
   const passOk = safeEqual(String(password || ''), expectedPass);
   return userOk && passOk;
@@ -109,10 +117,14 @@ export function clearSessionCookie(res) {
 
 export function requireAuth(req, res, next) {
   if (!isAuthConfigured()) {
-    res.status(503).json({
-      ok: false,
-      error: 'Dashboard auth is not configured. Set AUTH_USERNAME, AUTH_PASSWORD, and AUTH_SECRET.'
-    });
+    if (req.path.startsWith('/api/')) {
+      res.status(503).json({
+        ok: false,
+        error: 'Dashboard auth is not configured. Set AUTH_USERNAME, AUTH_PASSWORD, and AUTH_SECRET, then redeploy.'
+      });
+      return;
+    }
+    res.redirect('/login.html?error=auth-not-configured');
     return;
   }
 

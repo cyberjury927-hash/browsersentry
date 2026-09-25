@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import {
   clearSessionCookie,
   createSessionToken,
+  getAuthConfigStatus,
   getSessionFromRequest,
   isAuthConfigured,
   requireAuth,
@@ -78,7 +79,8 @@ app.get('/api/auth/status', (_req, res) => {
     ok: true,
     authConfigured: isAuthConfigured(),
     authenticated: Boolean(session),
-    user: session?.user || null
+    user: session?.user || null,
+    env: getAuthConfigStatus()
   });
 });
 
@@ -151,7 +153,11 @@ app.post('/api/events', ensureDatabase, async (req, res) => {
   }
 });
 
-app.get('/', requireAuth, (_req, res) => {
+app.get('/', (req, res) => {
+  if (!isAuthConfigured() || !getSessionFromRequest(req)) {
+    res.redirect('/login.html');
+    return;
+  }
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
@@ -211,6 +217,12 @@ app.get('/api/events/stream', async (req, res) => {
 });
 
 app.use(express.static(PUBLIC_DIR, { index: false }));
+
+app.use((err, _req, res, _next) => {
+  console.error('[analytics] Unhandled error:', err);
+  if (res.headersSent) return;
+  res.status(500).json({ ok: false, error: 'Internal server error' });
+});
 
 async function startLocalServer() {
   if (!isDatabaseConfigured()) {
