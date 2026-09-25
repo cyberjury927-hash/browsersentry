@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in · BrowserSentry Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="analytics-eyebrow">BrowserSentry</div>
+    <h1>Analytics dashboard</h1>
+    <p class="login-lead">Sign in to view usage analytics and event history.</p>
+
+    <form id="login-form" class="login-form">
+      <label>
+        Username
+        <input id="username" name="username" type="text" autocomplete="username" required>
+      </label>
+      <label>
+        Password
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button class="btn-primary login-submit" type="submit">Sign in</button>
+    </form>
+  </main>
+  <script type="module" src="login.js"></script>
+</body>
+</html>

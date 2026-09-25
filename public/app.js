@@ -24,6 +24,18 @@ let activeView = 'overview';
 let activeFeature = 'overview';
 let stream = null;
 
+async function apiFetch(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'same-origin'
+  });
+  if (response.status === 401) {
+    window.location.href = '/login.html';
+    throw new Error('Authentication required');
+  }
+  return response;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -309,7 +321,7 @@ function setActiveView(view) {
 }
 
 async function loadMetrics() {
-  const response = await fetch('/api/metrics');
+  const response = await apiFetch('/api/metrics');
   if (!response.ok) throw new Error('Failed to load metrics');
   metrics = await response.json();
   renderGlobalStats();
@@ -322,7 +334,7 @@ async function loadMetrics() {
 }
 
 async function loadEvents() {
-  const response = await fetch('/api/events');
+  const response = await apiFetch('/api/events');
   if (!response.ok) throw new Error('Failed to load events');
   const data = await response.json();
   allEvents = Array.isArray(data.events) ? data.events : [];
@@ -343,7 +355,7 @@ function upsertEvent(event) {
 
 function connectStream() {
   if (stream) stream.close();
-  stream = new EventSource('/api/events/stream');
+  stream = new EventSource('/api/events/stream', { withCredentials: true });
 
   stream.addEventListener('snapshot', event => {
     const payload = JSON.parse(event.data);
@@ -410,9 +422,13 @@ document.querySelectorAll('.main-tab').forEach(tab => {
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadEvents().catch(() => {}));
 document.getElementById('export-btn').addEventListener('click', exportCsv);
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await apiFetch('/api/logout', { method: 'POST' }).catch(() => {});
+  window.location.href = '/login.html';
+});
 document.getElementById('clear-btn').addEventListener('click', async () => {
   if (!confirm('Clear all analytics events on the server?')) return;
-  await fetch('/api/events', { method: 'DELETE' });
+  await apiFetch('/api/events', { method: 'DELETE' });
   selectedId = null;
   eventDetail.textContent = 'Select a row to inspect metadata.';
   allEvents = [];
