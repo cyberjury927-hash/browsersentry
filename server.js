@@ -17,6 +17,7 @@ import { computeMetrics } from './metrics.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3847;
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,37 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const sseClients = new Set();
+let dbReady = false;
+let dbInitPromise = null;
+
+async function ensureDatabase() {
+  if (!isDatabaseConfigured()) {
+    throw new Error('DATABASE_URL is not set. Add it in Vercel project settings or browsersentry-analytics/.env');
+  }
+  if (dbReady) return;
+  if (!dbInitPromise) {
+    dbInitPromise = (async () => {
+      await initDatabase();
+      if (!IS_VERCEL) {
+        const migrated = await migrateLocalJsonIfNeeded();
+        if (migrated > 0) {
+          console.log(`[analytics] Migrated ${migrated} local JSON events into Supabase.`);
+        }
+      }
+      dbReady = true;
+    })();
+  }
+  await dbInitPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (error) {
+    res.status(503).json({ ok: false, error: error.message });
+  }
+});
 
 function broadcast(eventName, payload) {
   const data = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
@@ -103,23 +135,26 @@ app.get('/api/events/stream', async (req, res) => {
     res.write(`event: snapshot\ndata: ${JSON.stringify({ events })}\n\n`);
   } catch (error) {
     res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+    return;
+  }
+
+  if (IS_VERCEL) {
+    res.end();
+    return;
   }
 
   sseClients.add(res);
   req.on('close', () => sseClients.delete(res));
 });
 
-async function start() {
-  if (!isDatabaseConfigured()) {
-    console.error('[analytics] Missing DATABASE_URL.');
-    console.error('[analytics] Copy analytics-server/.env.example to analytics-server/.env and add your Supabase password.');
+async function startLocalServer() {
+  try {
+    await ensureDatabase();
+  } catch (error) {
+    console.error('[analytics]', error.message);
+    console.error('[analytics] Copy .env.example to .env and add your Supabase password.');
     process.exit(1);
-  }
-
-  await initDatabase();
-  const migrated = await migrateLocalJsonIfNeeded();
-  if (migrated > 0) {
-    console.log(`[analytics] Migrated ${migrated} local JSON events into Supabase.`);
   }
 
   app.listen(PORT, () => {
@@ -129,17 +164,21 @@ async function start() {
   });
 }
 
-start().catch(error => {
-  console.error('[analytics] Failed to start:', error.message);
-  process.exit(1);
-});
+if (!IS_VERCEL) {
+  startLocalServer().catch(error => {
+    console.error('[analytics] Failed to start:', error.message);
+    process.exit(1);
+  });
 
-process.on('SIGINT', async () => {
-  await closeDatabase();
-  process.exit(0);
-});
+  process.on('SIGINT', async () => {
+    await closeDatabase();
+    process.exit(0);
+  });
 
-process.on('SIGTERM', async () => {
-  await closeDatabase();
-  process.exit(0);
-});
+  process.on('SIGTERM', async () => {
+    await closeDatabase();
+    process.exit(0);
+  });
+}
+
+export default app;

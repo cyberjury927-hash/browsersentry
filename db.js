@@ -20,7 +20,7 @@ export function getPool() {
   if (!pool) {
     const connectionString = getDatabaseUrl();
     if (!connectionString) {
-      throw new Error('DATABASE_URL is not set. Add it to analytics-server/.env');
+      throw new Error('DATABASE_URL is not set. Add it to browsersentry-analytics/.env or Vercel env vars');
     }
     pool = new pg.Pool({
       connectionString,

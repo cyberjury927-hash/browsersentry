@@ -370,8 +370,18 @@ function connectStream() {
   });
 
   stream.onerror = () => {
-    liveStatus.textContent = 'Reconnecting to live stream…';
+    liveStatus.textContent = 'Live stream unavailable — polling for updates…';
+    startPolling();
   };
+}
+
+let pollTimer = null;
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(() => {
+    loadEvents().catch(() => {});
+  }, 15000);
 }
 
 function exportCsv() {
