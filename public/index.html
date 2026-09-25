@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrowserSentry Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="analytics-shell">
+    <header class="analytics-topbar">
+      <div>
+        <div class="analytics-eyebrow">BrowserSentry</div>
+        <h1>Usage analytics</h1>
+        <p id="live-status">Connecting…</p>
+      </div>
+      <div class="analytics-actions">
+        <button class="btn-secondary" id="export-btn" type="button">Export CSV</button>
+        <button class="btn-secondary" id="clear-btn" type="button">Clear history</button>
+        <button class="btn-primary" id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section class="stats-grid" id="stats-grid"></section>
+
+    <nav class="main-tabs" id="main-tabs">
+      <button class="main-tab active" data-view="overview" type="button">Overview</button>
+      <button class="main-tab" data-view="features" type="button">By feature</button>
+      <button class="main-tab" data-view="events" type="button">All events</button>
+    </nav>
+
+    <section id="view-overview" class="view-panel active">
+      <div class="panel-card">
+        <div class="panel-head">
+          <h2>Extension adoption</h2>
+          <span class="chip">Tracked via analytics</span>
+        </div>
+        <p class="panel-note">Install counts reflect devices that sent an install event to this server. Chrome Web Store download totals are separate and not available here.</p>
+        <div class="stats-grid compact" id="adoption-stats"></div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-head">
+          <h2>Feature usage summary</h2>
+          <span class="chip">Click a row to drill down</span>
+        </div>
+        <div class="table-wrap">
+          <table class="feature-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Views</th>
+                <th>Clicks</th>
+                <th>Security</th>
+                <th>Unique users</th>
+                <th>Unique devices</th>
+                <th>Total events</th>
+              </tr>
+            </thead>
+            <tbody id="feature-summary-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-features" class="view-panel">
+      <nav class="feature-tabs" id="feature-tabs"></nav>
+      <div class="feature-detail" id="feature-detail"></div>
+    </section>
+
+    <section id="view-events" class="view-panel">
+      <section class="filters">
+        <label>
+          Event type
+          <select id="filter-type">
+            <option value="">All</option>
+            <option value="click">Clicks</option>
+            <option value="page_view">Page views</option>
+            <option value="navigation">Navigation</option>
+            <option value="security">Security</option>
+            <option value="auth">Auth</option>
+            <option value="install">Installs</option>
+            <option value="lifecycle">Lifecycle</option>
+          </select>
+        </label>
+        <label>
+          Feature
+          <select id="filter-feature">
+            <option value="">All</option>
+          </select>
+        </label>
+        <label>
+          Search
+          <input id="filter-search" type="search" placeholder="Label, element, detail…">
+        </label>
+        <label>
+          User email
+          <input id="filter-email" type="search" placeholder="user@example.com">
+        </label>
+      </section>
+
+      <div class="analytics-layout">
+        <section class="panel-main">
+          <div class="panel-head">
+            <h2>Live event stream</h2>
+            <span id="event-count" class="chip">0 events</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Feature</th>
+                  <th>Action</th>
+                  <th>Label / Element</th>
+                  <th>User</th>
+                  <th>Device</th>
+                  <th>Ver</th>
+                </tr>
+              </thead>
+              <tbody id="events-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="panel-side">
+          <h2>Top clicks</h2>
+          <ul id="top-clicks" class="rank-list"></ul>
+          <h2>Features used</h2>
+          <ul id="top-features" class="rank-list"></ul>
+          <h2>Event types</h2>
+          <ul id="type-breakdown" class="rank-list"></ul>
+          <h2>Selected event</h2>
+          <pre id="event-detail" class="event-detail">Select a row to inspect metadata.</pre>
+        </aside>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
